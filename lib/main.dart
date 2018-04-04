@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert' show utf8, json;
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -52,8 +53,13 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   String barcode = "";
+  String encodedData = '';
+  // device info
   static final DeviceInfoPlugin deviceInfoPlugin = new DeviceInfoPlugin();
   Map<String, dynamic> _deviceData = <String, dynamic>{};
+
+  // for geolocation
+  Map<String, double> _coordinates = new Map();
 
   void initState() {
     super.initState();
@@ -82,10 +88,12 @@ class _MyHomePageState extends State<MyHomePage> {
           )),
     );
   }
+
   Future scan() async {
     try {
       String barcode = await BarcodeScanner.scan();
       setState(() => this.barcode = barcode);
+      postTest();
     } on PlatformException catch (e) {
       if (e.code == BarcodeScanner.CameraAccessDenied) {
         setState(() {
@@ -100,51 +108,55 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() => this.barcode = 'Unknown error: $e');
     }
   }
-_getCoordinates() async {
-  Map<String, double> coordinates;
-  // Platform messages may fail, so we use a try/catch PlatformException.
-  try {
-    coordinates = await GpsCoordinates.gpsCoordinates;
-  } on PlatformException {
-    Map<String, double> placeholdCoordinates = new Map();
-    placeholdCoordinates["lat"] = 0.0;
-    placeholdCoordinates["long"] = 0.0;
-    coordinates = placeholdCoordinates;
+
+  _getCoordinates() async {
+    Map<String, double> coordinates;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      coordinates = await GpsCoordinates.gpsCoordinates;
+    } on PlatformException {
+      Map<String, double> placeholdCoordinates = new Map();
+      placeholdCoordinates["lat"] = 0.0;
+      placeholdCoordinates["long"] = 0.0;
+      coordinates = placeholdCoordinates;
+    }
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted)
+      return;
+
+    setState(() {
+      _coordinates = coordinates;
+    });
+    print(_coordinates);
+}
+
+  Future<Null> initPlatformState() async {
+   Map<String, dynamic> deviceData;
+
+   try {
+     if (Platform.isAndroid) {
+       deviceData = _readAndroidBuildData(await deviceInfoPlugin.androidInfo);
+     } else if (Platform.isIOS) {
+       deviceData = _readIosDeviceInfo(await deviceInfoPlugin.iosInfo);
+     }
+   } on PlatformException {
+     deviceData = <String, dynamic>{
+       'Error:': 'Failed to get platform version.'
+     };
+   }
+
+   if (!mounted) return;
+
+   setState(() {
+     _deviceData = deviceData;
+   });
+   print(_deviceData);
   }
 
-  // If the widget was removed from the tree while the asynchronous platform
-  // message was in flight, we want to discard the reply rather than calling
-  // setState to update our non-existent appearance.
-  if (!mounted)
-    return;
-
-  setState(() {
-    _coordinates = coordinates;
-  });
-}
-Future<Null> initPlatformState() async {
- Map<String, dynamic> deviceData;
-
- try {
-   if (Platform.isAndroid) {
-     deviceData = _readAndroidBuildData(await deviceInfoPlugin.androidInfo);
-   } else if (Platform.isIOS) {
-     deviceData = _readIosDeviceInfo(await deviceInfoPlugin.iosInfo);
-   }
- } on PlatformException {
-   deviceData = <String, dynamic>{
-     'Error:': 'Failed to get platform version.'
-   };
- }
-
- if (!mounted) return;
-
- setState(() {
-   _deviceData = deviceData;
- });
- print(_deviceData);
-}
-Map<String, dynamic> _readAndroidBuildData(AndroidDeviceInfo build) {
+  Map<String, dynamic> _readAndroidBuildData(AndroidDeviceInfo build) {
     return <String, dynamic>{
       'version.securityPatch': build.version.securityPatch,
       'version.sdkInt': build.version.sdkInt,
@@ -172,5 +184,27 @@ Map<String, dynamic> _readAndroidBuildData(AndroidDeviceInfo build) {
       'type': build.type,
       'isPhysicalDevice': build.isPhysicalDevice,
     };
+  }
+  Future<String> postTest() async {
+    String encodedData = json.encode({
+      "barcode": barcode,
+      "deviceInfo": _deviceData,
+      "coordinates": _coordinates,
+      "debit_ac":"1234",
+      "credit_ac":"5678",
+      "amount":"520"
+    });
+    // String postData = json.encode({
+    //   "userId": 10,
+    //   "id": 100,
+    //   "title": "at nam consequatur ea labore ea harum",
+    //   "body": "cupiditate quo est a modi nesciunt soluta\nipsa voluptas error itaque dicta in\nautem qui minus magnam et distinctio eum\naccusamus ratione error aut"
+    // });
+    print(encodedData);
+    //var url = "https://jsonplaceholder.typicode.com/posts";
+    var url = "http://192.168.1.201:8989/validate/qr-code/";
+    http.post(url, body: encodedData).then((response){
+      print(response.body);
+    });
   }
 }
