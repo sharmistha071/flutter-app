@@ -54,6 +54,8 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   String barcode = "";
   String encodedData = '';
+  // post response message
+	String responseMessage = "";
   // device info
   static final DeviceInfoPlugin deviceInfoPlugin = new DeviceInfoPlugin();
   Map<String, dynamic> _deviceData = <String, dynamic>{};
@@ -82,7 +84,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: scan, child: new Text("Scan")),
                   padding: const EdgeInsets.all(8.0),
                 ),
-                new Text(barcode),
+                //new Text(barcode),
+                new Text(responseMessage),
               ],
             ),
           )),
@@ -130,7 +133,8 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _coordinates = coordinates;
     });
-    print(_coordinates);
+    print(_coordinates["lat"]);
+    print(_coordinates["long"]);
 }
 
   Future<Null> initPlatformState() async {
@@ -158,53 +162,31 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Map<String, dynamic> _readAndroidBuildData(AndroidDeviceInfo build) {
     return <String, dynamic>{
-      'version.securityPatch': build.version.securityPatch,
-      'version.sdkInt': build.version.sdkInt,
-      'version.release': build.version.release,
-      'version.previewSdkInt': build.version.previewSdkInt,
-      'version.incremental': build.version.incremental,
-      'version.codename': build.version.codename,
-      'version.baseOS': build.version.baseOS,
-      'board': build.board,
-      'bootloader': build.bootloader,
       'brand': build.brand,
-      'device': build.device,
-      'display': build.display,
-      'fingerprint': build.fingerprint,
-      'hardware': build.hardware,
-      'host': build.host,
-      'id': build.id,
-      'manufacturer': build.manufacturer,
       'model': build.model,
-      'product': build.product,
-      'supported32BitAbis': build.supported32BitAbis,
-      'supported64BitAbis': build.supported64BitAbis,
-      'supportedAbis': build.supportedAbis,
-      'tags': build.tags,
-      'type': build.type,
-      'isPhysicalDevice': build.isPhysicalDevice,
     };
   }
-  Future<String> postTest() async {
+  void postTest() async {
     String encodedData = json.encode({
       "barcode": barcode,
-      "deviceInfo": _deviceData,
-      "coordinates": _coordinates,
-      "debit_ac":"1234",
-      "credit_ac":"5678",
-      "amount":"520"
+      "metadata": _deviceData,
+      "lat": _coordinates["lat"],
+      "long": _coordinates["long"],
     });
-    // String postData = json.encode({
-    //   "userId": 10,
-    //   "id": 100,
-    //   "title": "at nam consequatur ea labore ea harum",
-    //   "body": "cupiditate quo est a modi nesciunt soluta\nipsa voluptas error itaque dicta in\nautem qui minus magnam et distinctio eum\naccusamus ratione error aut"
-    // });
+    Map headers = {
+			"Content-type": "application/json",
+			"Accept": "application/json"
+		};
     print(encodedData);
-    //var url = "https://jsonplaceholder.typicode.com/posts";
     var url = "http://192.168.1.201:8989/validate/qr-code/";
-    http.post(url, body: encodedData).then((response){
-      print(response.body);
-    });
+
+    http.Response response = await http.post(
+				Uri.encodeFull(url),
+				body: encodedData,
+        headers: headers
+		);
+    // catch the response message
+		String responseMessage = response.body;
+		setState(() => this.responseMessage = responseMessage);
   }
 }
