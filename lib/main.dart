@@ -84,10 +84,16 @@ class _MyHomePageState extends State<MyHomePage> {
                       onPressed: scan, child: new Text("Scan")),
                   padding: const EdgeInsets.all(8.0),
                 ),
+                new Container(
+                  child: new MaterialButton(
+                      onPressed: _pushSaved, child: new Text("Generate QR")),
+                  padding: const EdgeInsets.all(8.0),
+                ),
                 //new Text(barcode),
                 new Text(responseMessage),
               ],
             ),
+
           )),
     );
   }
@@ -166,6 +172,7 @@ class _MyHomePageState extends State<MyHomePage> {
       'model': build.model,
     };
   }
+
   void postTest() async {
     String encodedData = json.encode({
       "barcode": barcode,
@@ -188,5 +195,33 @@ class _MyHomePageState extends State<MyHomePage> {
     // catch the response message
 		String responseMessage = response.body;
 		setState(() => this.responseMessage = responseMessage);
+  }
+
+  // navigate to  qrcode Generator page
+  void _pushSaved() {
+    Navigator.of(context).push(
+      new MaterialPageRoute(builder: (context) => new QrGenerator()),
+    );
+  }
+}
+
+
+class QrGenerator extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        title: new Text("Second Screen"),
+      ),
+      body: new Center(
+        child: new RaisedButton(
+          onPressed: () {
+            // Navigate back to first screen when tapped!
+            Navigator.pop(context);
+          },
+          child: new Text('Go back!'),
+        ),
+      ),
+    );
   }
 }
