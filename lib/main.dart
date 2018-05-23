@@ -4,9 +4,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:gps_coordinates/gps_coordinates.dart';
 import 'package:device_info/device_info.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 void main() => runApp(new MyApp());
 
@@ -197,7 +199,7 @@ class _MyHomePageState extends State<MyHomePage> {
 		setState(() => this.responseMessage = responseMessage);
   }
 
-  // navigate to  qrcode Generator page
+  // navigate to qrcode Generator page
   void _pushSaved() {
     Navigator.of(context).push(
       new MaterialPageRoute(builder: (context) => new QrGenerator()),
@@ -205,23 +207,174 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-
-class QrGenerator extends StatelessWidget {
+class QrGenerator extends StatefulWidget {
   @override
+  _QrGeneratorState createState() => new _QrGeneratorState();
+}
+class _QrGeneratorState extends State<QrGenerator> {
+  String payment;
+  String max_scan;
+  DateTime _dateTime = new DateTime.now();
+
+  @override
+  void generateQR(payment, max_scan, date) {
+    print(payment);
+    print(max_scan);
+    print(date);
+  }
+
+  // Future<Null> _selectDate(BuildContext context) async {
+  //   final DateTime picked = await showDatePicker(
+  //       context: context,
+  //       initialDate: date,
+  //       firstDate: date.subtract(const Duration(hours: 1)),
+  //       lastDate: new DateTime.now().add(const Duration(days: 200000))
+  //   );
+  //
+  //   if(picked != null && picked != date){
+  //     print('Date selected: ${date.toString()}');
+  //     setState((){
+  //       date = picked;
+  //     });
+  //   }
+  // }
+  // final paymentController = new TextEditingController();
+  // final titleController = new TextEdititngController();
+
+  TextEditingController _paymentController;
+  TextEditingController _maxScanNumberController;
+  TextEditingController _datePickerController;
+
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text("Second Screen"),
+        title: new Text('Generate QRCode')
       ),
-      body: new Center(
-        child: new RaisedButton(
-          onPressed: () {
-            // Navigate back to first screen when tapped!
-            Navigator.pop(context);
-          },
-          child: new Text('Go back!'),
-        ),
+
+      body: new Container(
+        padding: const EdgeInsets.fromLTRB(8.0, 10.0, 8.0, 8.0),
+        child: new Column(
+          children: <Widget>[
+            new ListTile(
+	            leading: new Icon(Icons.euro_symbol),
+	            title: new TextField(
+		            controller:  _paymentController,
+		            decoration: new InputDecoration(
+			            labelText: 'Payment',
+			            hintText: 'Enter your Payment',
+		            ),
+                keyboardType: TextInputType.number,
+		            autocorrect: true,
+		            autofocus: true,
+		           	onChanged: (value) => payment = value,
+	            ),
+            ),
+            new ListTile(
+              leading: new Icon(Icons.title),
+              title: new TextField(
+                controller: _maxScanNumberController,
+                decoration: new InputDecoration(
+                  labelText: 'Max Scan',
+                  hintText: 'Max Scan'
+                ),
+                keyboardType: TextInputType.number,
+                autocorrect: true,
+                autofocus: true,
+                onChanged: (value) => max_scan = value,
+              ),
+            ),
+            new ListTile(
+              leading: new Icon(Icons.today),
+              title: new DateTimeItem(
+                dateTime: _dateTime,
+                onChanged: (dateTime) => setState(() => _dateTime = dateTime),
+              ),
+            ),
+            new RaisedButton(
+               onPressed: () {
+                 generateQR(this.payment, this.max_scan, this._dateTime);},
+               // () {
+								//  print(this.payment);
+								//  print(this.max_scan);
+								//  print(this._dateTime);
+								//  	// handleSubmit(this.location, this.title, this.description);
+								// 	// Navigator.of(context).pushNamed("/HomeScreen");
+								// },
+               color: Colors.redAccent[400],
+               textColor: Colors.white,
+               child: new Text("Save")
+             ),
+          ]
+        )
       ),
     );
+  }
+}
+
+class DateTimeItem extends StatelessWidget {
+  DateTimeItem({Key key, DateTime dateTime, @required this.onChanged})
+      : assert(onChanged != null),
+        date = dateTime == null
+            ? new DateTime.now()
+            : new DateTime(dateTime.year, dateTime.month, dateTime.day),
+        time = dateTime == null
+            ? new DateTime.now()
+            : new TimeOfDay(hour: dateTime.hour, minute: dateTime.minute),
+        super(key: key);
+
+  final DateTime date;
+  final TimeOfDay time;
+  final ValueChanged<DateTime> onChanged;
+
+
+  @override
+  Widget build(BuildContext context) {
+    return new Row(
+      children: <Widget>[
+        new Expanded(
+          child: new InkWell(
+            onTap: (() => _showDatePicker(context)),
+            child: new Padding(
+                padding: new EdgeInsets.symmetric(vertical: 8.0),
+                child: new Text(new DateFormat.yMMMd().format(date))),
+          ),
+        ),
+        new InkWell(
+          onTap: (() => _showTimePicker(context)),
+          child: new Padding(
+              padding: new EdgeInsets.symmetric(vertical: 8.0),
+              child: new Text(time.format(context)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future _showDatePicker(BuildContext context) async {
+    DateTime dateTimePicked = await showDatePicker(
+        context: context,
+        initialDate: date,
+        firstDate: date.subtract(const Duration(hours: 1)),
+        lastDate: new DateTime.now().add(const Duration(days: 200000))
+    );
+
+
+    if (dateTimePicked != null) {
+      onChanged(new DateTime(
+          dateTimePicked.year,
+          dateTimePicked.month,
+          dateTimePicked.day,
+          time.hour,
+          time.minute)
+      );
+    }
+  }
+
+  Future _showTimePicker(BuildContext context) async {
+    TimeOfDay timeOfDay = await showTimePicker(context: context, initialTime: time);
+    if (timeOfDay != null) {
+      onChanged(new DateTime(
+          date.year, date.month, date.day, timeOfDay.hour, timeOfDay.minute));
+    }
   }
 }
