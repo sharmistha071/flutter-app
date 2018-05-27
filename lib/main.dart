@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:gps_coordinates/gps_coordinates.dart';
 import 'package:device_info/device_info.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 
 import 'plot_qr.dart';
@@ -201,38 +202,42 @@ class _QrGeneratorState extends State<QrGenerator> {
   String payment;
   String max_scan;
   DateTime _dateTime = new DateTime.now();
-  var _rndm = new Random().nextInt(1000);
-
+  // var _rndm = new Random();
+  var uuid = new Uuid();
+  //var _rndm = _rndm.toString(36).substring(2);
+  //print('$_rndm');
   @override
-  void postData(encodedData) {
+  void postData(encodedData) async {
+
     Map headers = {
       "Content-type": "application/json",
       "Accept": "application/json"
     };
     var url = "http://localhost:3000/qr";
-
+    print(encodedData);
     http.Response response = await http.post(
-        Uri.encodeFull(url),
+        Uri.encodeFull('https://jsonplaceholder.typicode.com/posts'),
         body: encodedData,
         headers: headers
     );
+    print(response.body);
+    //catch the response message
+    String responseMessage = response.body;
 
-    // catch the response message
-    // String responseMessage = response.body;
-    // print('$responseMessage');
-    // setState(() => this.responseMessage = responseMessage);
+    setState(() => print(responseMessage));
   }
+
   void generateQR(payment, max_scan, date) {
     String encodedData = json.encode({
       "payment": payment,
       "max_scan": max_scan,
       "date": date.toString(),
-      "rndm": _rndm
+      "rndm": uuid.v1().toString()
     });
     postData(encodedData);
     Navigator.push(
         context,
-        new MaterialPageRoute(builder: (context) => new PlotQr(payment, max_scan, date)),
+        new MaterialPageRoute(builder: (context) => new PlotQr(payment, max_scan, date, uuid.v1().toString())),
       );
   }
 

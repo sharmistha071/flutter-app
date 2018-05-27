@@ -7,10 +7,13 @@ class PlotQr extends StatefulWidget {
   String payment;
   String max_scan;
   DateTime date;
-  PlotQr(String payment, String max_scan, DateTime date){
+  String rndm;
+
+  PlotQr(String payment, String max_scan, DateTime date, String rndm){
     this.payment = payment;
     this.max_scan = max_scan;
     this.date = date;
+    this.rndm = rndm;
   }
 
   @override
